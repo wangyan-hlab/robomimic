@@ -126,8 +126,15 @@ def train(config, args, device):
         )
     
     if args.ckpt_path is not None:
-        _, model_dict = policy_from_checkpoint(device=device, ckpt_path=args.ckpt_path)
-        model.deserialize(model_dict['model'])
+         _, model_dict = policy_from_checkpoint(device=device, ckpt_path=args.ckpt_path)
+         model.deserialize(model_dict['model'])
+         config.unlock()
+         config.train.checkpoint = args.ckpt_path
+         config.lock()
+    else:
+        if config.train.checkpoint is not None:
+            _, model_dict = policy_from_checkpoint(device=device, ckpt_path=config.train.checkpoint)
+            model.deserialize(model_dict['model'])
 
     # save the config as a json file
     with open(os.path.join(log_dir, '..', 'config.json'), 'w') as outfile:
@@ -424,10 +431,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--debug",
         action='store_true',
-        help="set this flag to run a quick training run for debugging purposes"
+        help="set this flag to run a quick training run for debugging purposes",
     )
 
-    parser.add_argument("--ckpt_path", type=str, default=None, help="path to a checkpoint of the trained model")
+    parser.add_argument(
+        "--ckpt_path", 
+        type=str, 
+        default=None, 
+        help="(optional) if provided, override the checkpoint path defined in the config",
+    )
 
     args = parser.parse_args()
     main(args)
